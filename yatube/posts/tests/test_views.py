@@ -287,9 +287,6 @@ class PaginatorViewsTest(TestCase):
             title="Тестовое название"
         )
 
-        cls.auth_client = Client()
-        cls.auth_client.force_login(cls.user)
-
         for i in range(15, 0, -1):
             Post.objects.create(
                 author=cls.user,
@@ -315,7 +312,7 @@ class PaginatorViewsTest(TestCase):
         for url in urls:
             with self.subTest(url=url):
                 for page in (1, 2):
-                    response = self.auth_client.get(f"{url}?page={page}")
+                    response = self.client.get(f"{url}?page={page}")
                     page_obj = response.context.get("page_obj")
 
                     self.assertEqual(
