@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Об авторе проекта{% endblock %}
+{% block content %}
+{% load static %}
+<div class="container py-5">
+  <h3>Привет, я автор</h3>
+    <p>
+      Меня зовут 
+      <a href="https://github.com/DmitriyMikhalev">Дмитрий</a>,
+      мне 19 лет. Программированием занимаюсь год, учусь в университете на программиста-инженера.<br>
+      Свой путь начал с языка C++, который мне не понравился из-за преподавателя и его стиля обучения. 
+      Выбрал направление backend на языке Python, в изучении которого мне помогает 
+      <a href="https://yandex.ru/support/praktikum/">Яндекс Практикум</a> 
+      уже месяц.<br><br>
+      А вот так выглядит моя кружка. Да, я люблю котиков. Кто их не любит? :D<br><br>
+    <img src="{% static 'img/cat.png' %}" width="300" height="250">
+  </p>
+</div>
+{% endblock %} 

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Технологии{% endblock title %}
+
+
+{% block content %}
+<div class="container py-5">
+  <div class="row">
+    <h3>Технологии</h3>
+    <aside class="col-12 col-md-2">
+      <ul class="list-group list-group-flush">
+      <li class="list-group-item">
+        * Python v3.7
+      </li>
+      <li class="list-group-item">
+        * Django v2.2.19
+      </li>
+      <li class="list-group-item">
+        * Bootstrap
+      </li>
+      <li class="list-group-item">
+        * CSS
+      </li>
+      </ul>
+    </aside>
+    <article class="col-12 col-md-10">
+      <p> Язык программирования Python отвечает за серверную часть проекта - логику взаимодействия. 
+        Интересный факт: питоном он называется не в честь змеи, а в честь Британской комик-группы Monty Python.<br><br>
+        <img src="{% static 'img/Monty.png' %}" width="400" height="250" align="middle"><br><br>
+        Django - фреймворк, в разы упрощающий создание логики взаимодействия.<br><br>
+        Bootstrap и CSS - отвечают за визуальное устройство проекта.
+      </p>
+    </article>
+  </div>
+</div>
+{% endblock %}
