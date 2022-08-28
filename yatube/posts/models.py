@@ -58,7 +58,7 @@ class Follow(models.Model):
             ),
             models.CheckConstraint(
                 check=Q(~(F("author") == F("user"))),
-                name="self follow is not "
+                name="self follow is not accessed"
             )
         ]
 
