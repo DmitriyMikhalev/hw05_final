@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.db import models
 from core.models import AbstractModel
-from django.db.models import F
+from django.db.models import F, Q
 
 User = get_user_model()
 
@@ -51,6 +51,16 @@ class Follow(models.Model):
         ordering = [F("author").desc(nulls_last=True)]
         verbose_name = "Подписка"
         verbose_name_plural = "Подписки"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("author", "user",),
+                name="follow_exists"
+            ),
+            models.CheckConstraint(
+                check=Q(~(F("author") == F("user"))),
+                name="self follow is not "
+            )
+        ]
 
 
 class Group(models.Model):

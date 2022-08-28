@@ -1,19 +1,15 @@
 import shutil
 import tempfile
-from time import sleep
 
 from django import forms
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from posts.models import Comment, Follow, Group, Post
+from posts.models import Comment, Follow, Group, Post, User
 
 from ..forms import PostForm
-
-User = get_user_model()
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -33,13 +29,13 @@ class PaginatorViewsTest(TestCase):
             title="Тестовое название"
         )
 
-        for i in range(15, 0, -1):
-            Post.objects.create(
+        Post.objects.bulk_create(
+            [Post(
                 author=cls.user,
                 group=cls.group,
                 text=f"{i} number of post"
-            )
-            sleep(1E-6)
+            ) for i in range(15, 0, -1)]
+        )
 
     def test_paginator(self):
         urls = (
@@ -111,11 +107,6 @@ class PostsViewsTest(TestCase):
             slug="Test-slug",
             title="Тестовое название"
         )
-        cls.group_2 = Group.objects.create(
-            description="Тестовое описание второй группы",
-            slug="test-slug-group-2",
-            title="Тестовое название второй группы"
-        )
 
         cls.test_post = Post.objects.create(
             author=cls.user,
@@ -133,6 +124,9 @@ class PostsViewsTest(TestCase):
             text="test"
         )
 
+    def setUp(self):
+        cache.clear()
+
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
@@ -140,18 +134,18 @@ class PostsViewsTest(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def test_cache(self):
-        response = self.authorized_client.get(reverse("posts:index"))
-        posts = response.content
+        url = reverse("posts:index")
 
-        self.post = Post.objects.create(
+        instance = self.post = Post.objects.create(
             author=self.user,
             text="doesnt matter"
         )
+        old_content = self.authorized_client.get(url).content
+        instance.delete()
 
-        new_response = self.authorized_client.get(reverse("posts:index"))
-        new_posts = new_response.content
+        new_content = self.authorized_client.get(url).content
 
-        self.assertEqual(posts, new_posts)
+        self.assertEqual(old_content, new_content)
 
     def test_comment_at_post_detail(self):
         response = self.authorized_client.get(
@@ -210,10 +204,15 @@ class PostsViewsTest(TestCase):
 
     def test_post_created_at_right_group_and_profile(self):
         """Testing post was not created in the wrong profile and group"""
+        group_2 = Group.objects.create(
+            description="Тестовое описание второй группы",
+            slug="test-slug-group-2",
+            title="Тестовое название второй группы"
+        )
         urls = (
             reverse(
                 "posts:group_list",
-                kwargs={"slug": self.group_2.slug}
+                kwargs={"slug": group_2.slug}
             ),
             reverse(
                 "posts:profile",
@@ -286,7 +285,7 @@ class PostsViewsTest(TestCase):
         )
 
         self.assertEqual(
-            response.context.get("user_obj"),
+            response.context.get("author"),
             self.user
         )
         self.assertEqual(
@@ -297,7 +296,6 @@ class PostsViewsTest(TestCase):
         self.check_page_obj_at_context(response)
 
     def test_view_funcs_use_correct_templates(self):
-        cache.clear()
 
         names_templates = {
             reverse(
@@ -338,62 +336,57 @@ class TestSubscriptions(TestCase):
         cls.author_user = User.objects.create_user(
             username="username 1"
         )
-        cls.follower_user = User.objects.create_user(
-            username="username 3"
-        )
-        cls.random_user = User.objects.create_user(
-            username="username 2"
-        )
 
         cls.author_client = Client()
         cls.author_client.force_login(cls.author_user)
-
-        cls.follower_client = Client()
-        cls.follower_client.force_login(cls.follower_user)
-
-        cls.random_client = Client()
-        cls.random_client.force_login(cls.random_user)
 
         cls.post = Post.objects.create(
             author=cls.author_user,
             text="test"
         )
 
-    def setUp(self):
-        self.follower_client.get(
-            reverse(
-                "posts:profile_follow",
-                kwargs={"username": self.author_user.username}
-            )
-        )
-
     def test_follow_view(self):
-        old_count_follows = Follow.objects.count()
+        random_user = User.objects.create_user(username="username 2")
+        random_client = Client()
+        random_client.force_login(random_user)
 
-        self.random_client.get(
+        random_client.get(
             reverse(
                 "posts:profile_follow",
                 kwargs={"username": self.author_user.username}
             )
         )
 
-        self.assertEqual(old_count_follows + 1, Follow.objects.count())
+        self.assertEqual(
+            Follow.objects.filter(
+                author=self.author_user,
+                user=random_user
+            ).exists(),
+            True
+        )
 
     def test_post_shows_only_for_followers(self):
-        url = reverse("posts:follow_index")
+        new_user = User.objects.create(username="sss")
+        self.client.force_login(new_user)
 
-        response_follower = self.follower_client.get(url)
-        response_random_user = self.random_client.get(url)
+        response = self.client.get(reverse("posts:follow_index"))
+        page_obj = response.context.get("page_obj")
 
-        page_obj_follower = response_follower.context.get("page_obj")
-        page_obj_random_user = response_random_user.context.get("page_obj")
-
-        self.assertNotEqual(len(page_obj_follower), len(page_obj_random_user))
+        self.assertEqual(len(page_obj), 0)
 
     def test_unfollow_view(self):
+        follower_user = User.objects.create_user(username="username 3")
+        self.client.force_login(follower_user)
+
+        self.client.get(
+            reverse(
+                "posts:profile_follow",
+                kwargs={"username": self.author_user.username}
+            )
+        )
         old_count_follows = Follow.objects.count()
 
-        self.follower_client.get(
+        self.client.get(
             reverse(
                 "posts:profile_unfollow",
                 kwargs={"username": self.author_user.username}
@@ -401,3 +394,10 @@ class TestSubscriptions(TestCase):
         )
 
         self.assertEqual(old_count_follows - 1, Follow.objects.count())
+        self.assertEqual(
+            Follow.objects.filter(
+                author=self.author_user,
+                user=follower_user
+            ).exists(),
+            False
+        )

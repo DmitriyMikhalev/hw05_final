@@ -100,7 +100,8 @@ def post_edit(request, post_id):
     form = PostForm(
         request.POST or None,
         files=request.FILES or None,
-        instance=post)
+        instance=post
+    )
 
     if not form.is_valid():
         context = {
@@ -117,20 +118,20 @@ def post_edit(request, post_id):
 def profile(request, username):
     template = "posts/profile.html"
 
-    user = get_object_or_404(
+    author = get_object_or_404(
         User,
         username=username
     )
-    page_obj = get_page_obj(request, user.posts.all())
+    page_obj = get_page_obj(request, author.posts.all())
     following = Follow.objects.filter(
-        author__id=user.id,
+        author__id=author.id,
         user__id=request.user.id
     ).exists()
 
     context = {
         "following": following,
         "page_obj": page_obj,
-        "user_obj": user,
+        "author": author,
     }
     return render(request, template, context)
 
@@ -138,12 +139,8 @@ def profile(request, username):
 @login_required
 def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
-
-    if not (author == request.user or Follow.objects.filter(
-        author=author,
-        user=request.user).exists()
-    ):
-        Follow.objects.create(author=author, user=request.user)
+    if author != request.user:
+        Follow.objects.get_or_create(author=author, user=request.user)
 
     return redirect(reverse("posts:profile", kwargs={"username": username}))
 
@@ -151,11 +148,6 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
-
-    if not (author == request.user or not Follow.objects.filter(
-        author=author,
-        user=request.user).exists()
-    ):
-        Follow.objects.get(author=author, user=request.user).delete()
+    Follow.objects.get(author=author, user=request.user).delete()
 
     return redirect(reverse("posts:profile", kwargs={"username": username}))

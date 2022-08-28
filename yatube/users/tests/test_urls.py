@@ -1,12 +1,10 @@
 from http import HTTPStatus
 
 from django import utils
-from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.test import Client, TestCase
 from django.urls import reverse
-
-User = get_user_model()
+from .test_views import User
 
 
 class UsersTestUrls(TestCase):
