@@ -33,21 +33,21 @@ class PostUrlTests(TestCase):
         )
         cls.post_has_group = Post.objects.create(
             author=cls.user,
-            text="Some text",
-            group=cls.group
+            group=cls.group,
+            text="Some text"
         )
 
         cls.urls_templates = {
+            reverse(
+                "posts:group_list",
+                kwargs={"slug": cls.group.slug}
+            ): "posts/group_list.html",
             reverse(
                 "posts:index"
             ): "posts/index.html",
             reverse(
                 "posts:post_create"
             ): "posts/create_post.html",
-            reverse(
-                "posts:group_list",
-                kwargs={"slug": cls.group.slug}
-            ): "posts/group_list.html",
             reverse(
                 "posts:post_detail",
                 kwargs={"post_id": cls.post.id}
@@ -73,32 +73,10 @@ class PostUrlTests(TestCase):
 
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_redirect_unathorized_login(self):
-        urls = (
-            reverse("posts:post_create"),
-            reverse("posts:post_edit", kwargs={"post_id": self.post.id}),
-            reverse("posts:add_comment", kwargs={"post_id": self.post.id}),
-        )
-        for url in urls:
-            with self.subTest(url=url):
-                response = self.client.get(url, follow=True)
+    def test_correct_template_404(self):
+        response = self.client.get("something/does/not/exsist/")
 
-                self.assertRedirects(response, f"/auth/login/?next={url}")
-
-    def test_redirect_not_author_edit_to_post_info(self):
-        response = self.random_authorized_client.get(
-            reverse("posts:post_edit", kwargs={"post_id": self.post.id})
-        )
-
-        self.assertRedirects(
-            response,
-            reverse("posts:post_detail", kwargs={"post_id": self.post.id})
-        )
-
-    def test_unexpected_url_code(self):
-        response = self.authorized_client.get("/something/does/not/exist/")
-
-        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        self.assertTemplateUsed(response, "core/404.html")
 
     def test_correct_templates_used(self):
         for url, template in self.urls_templates.items():
@@ -107,7 +85,30 @@ class PostUrlTests(TestCase):
 
                 self.assertTemplateUsed(response, template)
 
-    def test_correct_template_404(self):
-        response = self.client.get("something/does/not/exsist/")
+    def test_redirect_not_author_edit_to_post_info(self):
+        response = self.random_authorized_client.get(
+            reverse("posts:post_edit", kwargs={"post_id": self.post.id}),
+            follow=True
+        )
 
-        self.assertTemplateUsed(response, "core/404.html")
+        self.assertRedirects(
+            response,
+            reverse("posts:post_detail", kwargs={"post_id": self.post.id})
+        )
+
+    def test_redirect_unathorized_to_login(self):
+        urls = (
+            reverse("posts:add_comment", kwargs={"post_id": self.post.id}),
+            reverse("posts:post_create"),
+            reverse("posts:post_edit", kwargs={"post_id": self.post.id}),
+        )
+        for url in urls:
+            with self.subTest(url=url):
+                response = self.client.get(url, follow=True)
+
+                self.assertRedirects(response, f"/auth/login/?next={url}")
+
+    def test_unexpected_url_code(self):
+        response = self.authorized_client.get("/something/does/not/exists/")
+
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)

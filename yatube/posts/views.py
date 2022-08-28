@@ -10,18 +10,26 @@ from .models import Comment, Follow, Group, Post, User
 from .utils import get_page_obj
 
 
-@cache_page(timeout=settings.CACHE_TIME, key_prefix="index_page")
-@vary_on_cookie
-def index(request):
-    template = "posts/index.html"
+@login_required
+def add_comment(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    form = CommentForm(request.POST or None)
 
-    posts_list = Post.objects.all()
-    page_obj = get_page_obj(request, posts_list)
+    if form.is_valid():
+        comment = form.save(commit=False)
+        comment.author = request.user
+        comment.post = post
+        comment.save()
 
-    context = {
-        "page_obj": page_obj,
-    }
-    return render(request, template, context)
+    return redirect("posts:post_detail", post_id=post_id)
+
+
+@login_required
+def follow_index(request):
+    posts = Post.objects.filter(author__following__user=request.user)
+    page_obj = get_page_obj(request, posts)
+
+    return render(request, "posts/follow.html", {'page_obj': page_obj})
 
 
 def group_posts(request, slug):
@@ -38,25 +46,31 @@ def group_posts(request, slug):
     return render(request, template, context)
 
 
-def profile(request, username):
-    template = "posts/profile.html"
+@cache_page(timeout=settings.CACHE_TIME, key_prefix="index_page")
+@vary_on_cookie
+def index(request):
+    template = "posts/index.html"
 
-    user = get_object_or_404(
-        User,
-        username=username
-    )
-    page_obj = get_page_obj(request, user.posts.all())
-    following = Follow.objects.filter(
-        author__id=user.id,
-        user__id=request.user.id
-    ).exists()
+    posts_list = Post.objects.all()
+    page_obj = get_page_obj(request, posts_list)
 
     context = {
         "page_obj": page_obj,
-        "user_obj": user,
-        "following": following,
     }
     return render(request, template, context)
+
+
+@login_required
+def post_create(request):
+    form = PostForm(request.POST or None, files=request.FILES or None)
+
+    if not form.is_valid():
+        return render(request, "posts/create_post.html", {"form": form})
+
+    post = form.save(commit=False)
+    post.author = request.user
+    post.save()
+    return redirect("posts:profile", username=request.user)
 
 
 def post_detail(request, post_id):
@@ -75,19 +89,6 @@ def post_detail(request, post_id):
         "posts_count": posts_count,
     }
     return render(request, template, context)
-
-
-@login_required
-def post_create(request):
-    form = PostForm(request.POST or None, files=request.FILES or None)
-
-    if not form.is_valid():
-        return render(request, "posts/create_post.html", {"form": form})
-
-    post = form.save(commit=False)
-    post.author = request.user
-    post.save()
-    return redirect("posts:profile", username=request.user)
 
 
 @login_required
@@ -113,26 +114,25 @@ def post_edit(request, post_id):
     return redirect("posts:post_detail", post_id=post_id)
 
 
-@login_required
-def add_comment(request, post_id):
-    post = get_object_or_404(Post, id=post_id)
-    form = CommentForm(request.POST or None)
+def profile(request, username):
+    template = "posts/profile.html"
 
-    if form.is_valid():
-        comment = form.save(commit=False)
-        comment.author = request.user
-        comment.post = post
-        comment.save()
+    user = get_object_or_404(
+        User,
+        username=username
+    )
+    page_obj = get_page_obj(request, user.posts.all())
+    following = Follow.objects.filter(
+        author__id=user.id,
+        user__id=request.user.id
+    ).exists()
 
-    return redirect("posts:post_detail", post_id=post_id)
-
-
-@login_required
-def follow_index(request):
-    posts = Post.objects.filter(author__following__user=request.user)
-    page_obj = get_page_obj(request, posts)
-
-    return render(request, "posts/follow.html", {'page_obj': page_obj})
+    context = {
+        "following": following,
+        "page_obj": page_obj,
+        "user_obj": user,
+    }
+    return render(request, template, context)
 
 
 @login_required

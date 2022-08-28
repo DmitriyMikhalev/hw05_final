@@ -36,6 +36,26 @@ class UsersViewsTest(TestCase):
             username="unauthorized"
         )
 
+    def test_signup_use_correct_context(self):
+        response = self.client.get(reverse("users:signup"))
+        form_obj = response.context.get("form")
+
+        form_field_types = {
+            "email": forms.fields.EmailField,
+            "first_name": forms.fields.CharField,
+            "last_name": forms.fields.CharField,
+            "username": forms.fields.CharField,
+        }
+        for field, expected_type in form_field_types.items():
+            with self.subTest(field=field):
+
+                self.assertIsInstance(
+                    form_obj.fields.get(field),
+                    expected_type
+                )
+
+        self.assertIsInstance(form_obj, models.ModelForm)
+
     def test_view_funcs_use_correct_template_authorized(self):
         for url, template in self.url_templates_authorized.items():
             with self.subTest(url=url):
@@ -57,15 +77,15 @@ class UsersViewsTest(TestCase):
                 "users:password_reset"
             ): "users/password_reset_form.html",
             reverse(
-                "users:password_reset_done"
-            ): "users/password_reset_done.html",
+                "users:password_reset_complete"
+            ): "users/password_reset_complete.html",
             reverse(
                 "users:password_reset_confirm",
                 kwargs={"uidb64": uidb64, "token": token}
             ): "users/password_reset_confirm.html",
             reverse(
-                "users:password_reset_complete"
-            ): "users/password_reset_complete.html",
+                "users:password_reset_done"
+            ): "users/password_reset_done.html",
             reverse(
                 "users:signup"
             ): "users/signup.html",
@@ -75,22 +95,3 @@ class UsersViewsTest(TestCase):
                 response = self.client.get(url, follow=True)
 
                 self.assertTemplateUsed(response, template)
-
-    def test_signup_use_correct_context(self):
-        response = self.client.get(reverse("users:signup"))
-        form_obj = response.context.get("form")
-
-        form_field_types = {
-            "email": forms.fields.EmailField,
-            "first_name": forms.fields.CharField,
-            "last_name": forms.fields.CharField,
-            "username": forms.fields.CharField,
-        }
-        for field, expected_type in form_field_types.items():
-            with self.subTest(field=field):
-
-                self.assertIsInstance(
-                    form_obj.fields.get(field),
-                    expected_type
-                )
-        self.assertIsInstance(form_obj, models.ModelForm)

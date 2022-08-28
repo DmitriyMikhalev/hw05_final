@@ -20,6 +20,8 @@ class PostFormsTest(TestCase):
     def setUpClass(cls):
         super().setUpClass()
 
+        cls.form = PostForm()
+
         cls.group = Group.objects.create(
             description="This is a group.. I hope.",
             slug="slugy",
@@ -39,27 +41,33 @@ class PostFormsTest(TestCase):
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.user)
 
-        cls.form = PostForm()
-
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()
 
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
-    def test_help_texts(self):
-        expected_help_texts = {
-            "group": "Группа, к которой должен относиться пост",
-            "text": "Введите текст",
-        }
-        for field, expected_help_text in expected_help_texts.items():
-            with self.subTest(field=field):
-                help_text = self.form.fields[field].help_text
+    def test_create_comment_database(self):
+        old_count_comments = Comment.objects.count()
 
-                self.assertEqual(help_text, expected_help_text)
+        form_data = {
+            "author": self.user,
+            "post": self.post,
+            "text": "test"
+        }
+
+        self.authorized_client.post(
+            reverse("posts:add_comment", kwargs={"post_id": self.post.id}),
+            data=form_data,
+            follow=True
+        )
+
+        self.assertEqual(Comment.objects.count(), old_count_comments + 1)
+        self.assertEqual(Comment.objects.filter(**form_data).exists(), True)
 
     def test_create_new_post_database(self):
         old_count_posts = Post.objects.count()
+
         form_data = {
             "author": self.user,
             "text": "Test text new post",
@@ -84,38 +92,6 @@ class PostFormsTest(TestCase):
             reverse(
                 "posts:profile",
                 kwargs={"username": self.user.username}
-            )
-        )
-
-    def test_edit_post_database(self):
-        posts_count = Post.objects.count()
-
-        form_data = {
-            "author": self.user,
-            "text": "Test edited",
-        }
-        response = self.authorized_client.post(
-            reverse(
-                "posts:post_edit",
-                kwargs={"post_id": self.post.id}
-            ),
-            data=form_data,
-            follow=True
-        )
-
-        self.assertEqual(
-            posts_count,
-            Post.objects.count()
-        )
-        self.assertEqual(
-            Post.objects.get(id=self.post.id),
-            Post.objects.get(**form_data)
-        )
-        self.assertRedirects(
-            response,
-            reverse(
-                "posts:post_detail",
-                kwargs={"post_id": self.post.id}
             )
         )
 
@@ -152,7 +128,6 @@ class PostFormsTest(TestCase):
             Post.objects.count(),
             old_count_posts + 1
         )
-
         self.assertEqual(
             Post.objects.filter(
                 author=self.user,
@@ -170,20 +145,47 @@ class PostFormsTest(TestCase):
             )
         )
 
-    def test_create_comment_database(self):
-        old_count_comments = Comment.objects.count()
+    def test_edit_post_database(self):
+        posts_count = Post.objects.count()
 
         form_data = {
             "author": self.user,
-            "post": self.post,
-            "text": "test"
+            "text": "Test edited",
         }
 
-        self.authorized_client.post(
-            reverse("posts:add_comment", kwargs={"post_id": self.post.id}),
+        response = self.authorized_client.post(
+            reverse(
+                "posts:post_edit",
+                kwargs={"post_id": self.post.id}
+            ),
             data=form_data,
             follow=True
         )
 
-        self.assertEqual(Comment.objects.count(), old_count_comments + 1)
-        self.assertEqual(Comment.objects.filter(**form_data).exists(), True)
+        self.assertEqual(
+            posts_count,
+            Post.objects.count()
+        )
+        self.assertEqual(
+            Post.objects.get(id=self.post.id),
+            Post.objects.get(**form_data)
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "posts:post_detail",
+                kwargs={"post_id": self.post.id}
+            )
+        )
+
+    def test_help_texts(self):
+        expected_help_texts = {
+            "group": "Группа, к которой должен относиться пост",
+            "text": "Введите текст",
+        }
+        for field, expected_help_text in expected_help_texts.items():
+            with self.subTest(field=field):
+                help_text = self.form.fields[field].help_text
+
+                self.assertEqual(help_text, expected_help_text)

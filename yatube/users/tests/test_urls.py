@@ -49,6 +49,20 @@ class UsersTestUrls(TestCase):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
 
+    def test_correct_templates_used_authorized(self):
+        for url, template in self.url_templates_auth.items():
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+
+                self.assertTemplateUsed(response, template)
+
+    def test_correct_templates_user_unauthorized(self):
+        for url, template in self.url_templates_not_auth.items():
+            with self.subTest(url=url):
+                response = self.client.get(url)
+
+                self.assertTemplateUsed(response, template)
+
     def test_password_reset_codes_templates(self):
         uidb64 = utils.http.urlsafe_base64_encode(
             utils.encoding.force_bytes(self.user.id)
@@ -58,35 +72,8 @@ class UsersTestUrls(TestCase):
         response = self.client.get(url, follow=True)
 
         self.assertTemplateUsed(response, "users/password_reset_confirm.html")
+
         self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_url_codes_unauthorized(self):
-        for url in self.url_templates_not_auth.keys():
-            with self.subTest(url=url):
-                response = self.client.get(url)
-
-                self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_url_codes_authorized(self):
-        for url in self.url_templates_auth.keys():
-            with self.subTest(url=url):
-                response = self.authorized_client.get(url)
-
-                self.assertEqual(response.status_code, HTTPStatus.OK)
-
-    def test_correct_templates_used_authorized(self):
-        for url, template in self.url_templates_auth.items():
-            with self.subTest(url=url):
-                response = self.authorized_client.get(url)
-
-                self.assertTemplateUsed(response, template)
-
-    def test_correct_templates_user_unaothorized(self):
-        for url, template in self.url_templates_not_auth.items():
-            with self.subTest(url=url):
-                response = self.client.get(url)
-
-                self.assertTemplateUsed(response, template)
 
     def test_redirect_unathorized_to_login(self):
         urls = (
@@ -98,3 +85,17 @@ class UsersTestUrls(TestCase):
                 response = self.client.get(url, follow=True)
 
                 self.assertRedirects(response, f"/auth/login/?next={url}")
+
+    def test_url_codes_authorized(self):
+        for url in self.url_templates_auth.keys():
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+
+                self.assertEqual(response.status_code, HTTPStatus.OK)
+
+    def test_url_codes_unauthorized(self):
+        for url in self.url_templates_not_auth.keys():
+            with self.subTest(url=url):
+                response = self.client.get(url)
+
+                self.assertEqual(response.status_code, HTTPStatus.OK)
