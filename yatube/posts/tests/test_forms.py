@@ -128,8 +128,8 @@ class PostFormsTest(TestCase):
         self.assertEqual(
             Post.objects.filter(
                 author=self.user,
-                text="Test text new post",
-                image="posts/small.gif"
+                text=form_data.get("text"),
+                image=f"posts/{uploaded.name}"
             ).exists(),
             True
         )
