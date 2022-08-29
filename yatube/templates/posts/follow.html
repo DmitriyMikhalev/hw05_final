@@ -9,10 +9,11 @@
     <h1> Записи отслеживаемых пользователей </h1>
     <article>
       {% for post in page_obj %}
-        {% include "includes/posts_list.html" %}
-        {% if not forloop.last %}
-          <hr>
-        {% endif %}
+        <div class="card my-4">
+          <div class="card-body">
+            {% include "includes/posts_list.html" %}
+          </div>
+        </div>
       {% endfor %}
     </article>
     {% include 'posts/paginator.html' %}

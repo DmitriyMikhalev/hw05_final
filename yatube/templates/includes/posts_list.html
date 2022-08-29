@@ -1,36 +1,29 @@
 {% load thumbnail %}
-<ul>
-  <li>
-    <b>Автор:</b> 
-    <a href="{% url 'posts:profile' post.author %}"> 
-      {{ post.author.get_full_name }} 
-    </a>
-  </li>
-  <li>
-    <b>Дата публикации:</b> {{ post.pub_date|date:"d E Y" }}
-  </li>
-  {% with request.resolver_match.view_name as view_name %}
-    {% if view_name == "posts:index" or view_name == "posts:profile" %}
-      <li>
-        <b>Группа:</b> 
-        {% if post.group %} 
-        <a href="{% url 'posts:group_list' post.group.slug %}"> 
-            {{ post.group }} </a>
-        {% else %}
-          ...
-        {% endif %}
-      </li>
+<h5 class="mt-0">
+  <a href="{% url 'posts:profile' post.author %}" style="text-decoration: none;"> 
+    {{ post.author.get_full_name }} 
+  </a>
+{% with request.resolver_match.view_name as view_name %}
+  {% if view_name == "posts:index" or view_name == "posts:profile" %}
+    {% if post.group %} 
+      в группе <a href="{% url 'posts:group_list' post.group.slug %}" style="text-decoration: none;"> 
+        {{ post.group }} 
+      </a>
     {% endif %}
-  {% endwith %}
-</ul>
+  {% endif %}
+{% endwith %}
+</h5>
 {% thumbnail post.image "960x339" crop="center" upscale=True as im %}
 <img class="card-img my-2" style="border-radius: 10px; border: 3px #ccc solid;" src="{{ im.url }}">
 {% endthumbnail %}
 <p>
   {{ post.text|truncatechars:250 }}
 </p>
-<button type="button" class="btn btn-outline-primary btn-sm">
-  <a class="nav-link" href="{% url "posts:post_detail" post.id %}">
-    Подробная информация
-  </a>
-</button>
+<div class="text-muted">
+  <small>{{ post.pub_date }}</small>
+  <button type="button" class="btn btn-outline-secondary btn-sm" style="float:right;">
+    <a class="nav-link" href="{% url "posts:post_detail" post.id %}">
+      Подробнее
+    </a>
+  </button>
+</div>
