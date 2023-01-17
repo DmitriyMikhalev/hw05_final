@@ -4,6 +4,7 @@ Pillow~=8.3
 pytest~=6.2
 pytest-django~=4.4
 pytest-pythonpath~=0.7
+python-dotenv~=0.2
 requests~=2.26
 six~=1.16
 sorl-thumbnail~=12.7

@@ -3,8 +3,8 @@ __YaTube__ is a social network for blogs. Here you can create posts, view
 publications, comment, join groups and subscribe to other authors.
 
 Stack: 
-- Python
-- Django
+- Python==3.8
+- Django~=2.2
 - HTML5
 - CSS (Bootstrap)
 
